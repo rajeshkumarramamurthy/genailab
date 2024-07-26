@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}
+  namespace: {{ .Release.Name }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      name: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        name: {{ .Release.Name }}
+    spec:
+      containers:
+      - name: {{ .Release.Name }}
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag}}"
+        securityContext:
+          capabilities:
+            add: ["SYS_NICE"]   
+        #command: [ "/bin/bash", "-c", "--" ]
+        #args: [ "while true; do sleep 30; done;" ]
+        ports:
+          - containerPort: {{ .Values.service.port }}
+        env:
+          - name: PT_HPU_ENABLE_LAZY_COLLECTIVES
+            value: "true"
+          - name: OMPI_MCA_btl_vader_single_copy_mechanism
+            value: none
+          - name: MODEL_NAME
+            value: {{ .Values.modelName }}
+        resources:
+          limits:
+            habana.ai/gaudi: {{ .Values.resources.numofgaudi }}
+            hugepages-2Mi: {{ .Values.resources.hugepages2Mi }}
+            memory: {{ .Values.resources.memory }}
+            #cpu: {{ .Values.resources.cpu }}
+        volumeMounts:
+          - name: models-cache
+            mountPath: models-cache
+      volumes:
+        - name: models-cache
+          hostPath:
+            path: {{ .Values.hostVolumePath }}
+            type: Directory
